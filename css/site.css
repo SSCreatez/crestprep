@@ -1,0 +1,66 @@
+/* =====================================================================
+   site.css: the signed-out homepage. PrepPros-simple: logo, one line,
+   sign in, then a quiet look at what students get.
+   ===================================================================== */
+
+.band {
+  background-color: var(--band);
+  background-image:
+    linear-gradient(var(--band-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--band-grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--band-text);
+}
+
+.home-top { text-align: center; padding: clamp(3rem, 9vw, 5.5rem) 1.25rem 3rem; }
+.home-logo {
+  display: inline-flex; align-items: center; gap: 0.8rem;
+  font-size: clamp(2.4rem, 6vw, 3.4rem); margin: 0 0 0.75rem;
+}
+.home-logo .crest { width: 52px; height: 58px; }
+.home-sub { max-width: 34rem; margin: 0 auto 1.75rem; color: var(--text-soft); font-size: 1.1rem; }
+
+/* Google's sign-in button style: white, thin gray border, the four-color G */
+.btn-google {
+  display: inline-flex; align-items: center; gap: 0.75rem;
+  min-height: 48px; padding: 0 1.5rem;
+  background: #FFFFFF; color: #1F1F1F;
+  border: 1px solid #747775; border-radius: 999px;
+  font: 500 1rem/1 var(--font-sans);
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+.btn-google:hover { background: #F6F8FB; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+.btn-google:disabled { opacity: 0.75; cursor: progress; }
+.btn-google svg { width: 20px; height: 20px; }
+.home-demo { margin: 1rem 0 0; }
+.home-top .form-error { max-width: 32rem; margin: 0.9rem auto 0; }
+
+.home-band { padding: clamp(2rem, 5vw, 3rem) 0; }
+.home-previews { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; max-width: 900px; }
+.preview-card { background: var(--surface); color: var(--text); border: 1px solid var(--rule); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; }
+.preview-label { display: flex; justify-content: space-between; gap: 1rem; font-family: var(--font-serif); font-weight: 700; margin: 0 0 0.9rem; }
+.preview-label span { align-self: center; font: 600 0.72rem var(--font-sans); color: var(--text-soft); border: 1px solid var(--rule); border-radius: 999px; padding: 0.1rem 0.5rem; }
+.mini-bars { display: grid; gap: 0.55rem; }
+.mini-bars div { display: grid; grid-template-columns: 11.5rem 1fr 1.5rem; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+.mini-bars i { display: block; height: 8px; background: var(--bad); border-radius: 999px; }
+.mini-bars b { font-family: var(--font-mono); text-align: right; }
+.preview-note { font-size: 0.82rem; color: var(--text-soft); margin: 0.9rem 0 0; }
+.preview-day { display: flex; justify-content: space-between; font-weight: 700; margin: 0 0 0.5rem; }
+.preview-day b, .preview-tasks b { font-family: var(--font-mono); }
+.preview-tasks { list-style: none; padding: 0; margin: 0 0 0.9rem; display: grid; gap: 0.4rem; font-size: 0.85rem; }
+.preview-tasks li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0.6rem; border: 1px solid var(--rule); border-left: 3px solid var(--primary); border-radius: var(--radius); }
+.preview-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.preview-week span { display: grid; justify-items: center; gap: 2px; padding: 0.3rem 0; font-size: 0.72rem; color: var(--text-soft); background: var(--bg-alt); border-radius: 4px; }
+.preview-week b { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text); }
+.preview-week .is-today { outline: 2px solid var(--gold); }
+
+.home-bluebook { max-width: 720px; padding: clamp(2.5rem, 6vw, 3.5rem) 0; }
+.home-bluebook h2 { color: var(--primary); }
+.home-foot { border-top: 1px solid var(--rule); padding: 1.75rem 0 2.5rem; font-size: 0.92rem; }
+.home-foot p { margin-bottom: 0.4rem; }
+.home-prefs { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.9rem; }
+
+@media (max-width: 760px) {
+  .home-previews { grid-template-columns: 1fr; }
+  .mini-bars div { grid-template-columns: 9.5rem 1fr 1.5rem; }
+}

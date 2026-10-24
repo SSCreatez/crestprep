@@ -1,0 +1,11 @@
+/* legal.css: the privacy policy and terms pages. Uses the same color variables as the app. */
+body { background: var(--bg); color: var(--text); font-family: var(--font-sans); margin: 0; }
+.legal { max-width: 68ch; margin: 0 auto; padding: 3rem 1.25rem 4rem; line-height: 1.65; }
+.legal a { color: var(--primary); }
+.legal .back { display: inline-block; margin-bottom: 2rem; font-weight: 600; text-decoration: none; }
+.legal h1 { font-family: var(--font-serif); font-size: 2rem; margin: 0 0 .25rem; }
+.legal .updated { color: var(--text-soft); margin: 0 0 2rem; }
+.legal h2 { font-family: var(--font-serif); font-size: 1.2rem; margin: 2.25rem 0 .5rem; }
+.legal p, .legal li { color: var(--text); }
+.legal ul { padding-left: 1.25rem; }
+.legal footer { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); color: var(--text-soft); font-size: .9rem; }
