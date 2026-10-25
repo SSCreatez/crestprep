@@ -29,6 +29,12 @@ function greeting() {
   return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 }
 
+/** "Good afternoon, Maya!" for Google accounts; just "Good afternoon!" for the demo account. */
+function greetingLine(user) {
+  const name = user && user.provider !== 'demo' ? String(user.name || '').trim() : '';
+  return name ? `${greeting()}, ${esc(name)}!` : `${greeting()}!`;
+}
+
 /** Destructive buttons need two clicks; the first one asks "Click again to confirm". */
 function armed(button) {
   if (button.dataset.armed) return true;
@@ -59,7 +65,7 @@ function firstTimeDashboard(s) {
   return `
   <div class="page"><div class="wrap-narrow dash">
     <header class="page-head">
-      <h1>${greeting()}, ${esc(s.user.name)}!</h1>
+      <h1>${greetingLine(s.user)}</h1>
       <p>Let's find out what to work on. Pick one way to start; either one builds your weak-spot list and your study calendar.</p>
     </header>
     <div class="start-grid">
@@ -205,7 +211,7 @@ function returningDashboard(s) {
   return `
   <div class="page"><div class="wrap dash-wide">
     <header class="page-head">
-      <h1>${greeting()}, ${esc(s.user.name)}!</h1>
+      <h1>${greetingLine(s.user)}</h1>
       <p>Your plan is built from ${esc(latest.label)} (${formatDate(latest.date, { month: 'short', day: 'numeric' })})${logCount ? `, including the ${logCount} question${logCount === 1 ? '' : 's'} in its error log` : ''} :)</p>
     </header>
     <div class="dash-grid">

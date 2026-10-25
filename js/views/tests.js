@@ -165,7 +165,7 @@ function moduleHTML() {
       <div class="bb-calc-slot"></div>
     </div>
     <div class="bb-bottom">
-      <span class="bb-name">${esc(getState().user.name)}</span>
+      <span class="bb-name">${getState().user.provider === 'demo' ? 'Demo Student' : esc(getState().user.name || 'Student')}</span>
       <div class="bb-nav-wrap">
         <button type="button" class="bb-nav-btn" data-action="nav-toggle" aria-expanded="${Boolean(run.navOpen)}">Question ${run.qi + 1} of ${ids.length}</button>
         ${run.navOpen ? `<div class="bb-nav" role="dialog" aria-label="Question navigator">
