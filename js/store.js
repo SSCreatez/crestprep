@@ -26,7 +26,7 @@ function blankState() {
     mistakes: [],               // practice questions answered wrong
     lessonsDone: [],
     lastLesson: null,
-    results: [],                // Bluebook uploads and diagnostics, newest first
+    results: [],                // the Crest Cache: Bluebook uploads and diagnostics, newest first
     goal: null,                 // { target, date, current (optional) }
     scoreHistory: [],           // [{ date, score, label }]
     session: { size: 12, style: 'rule', feedback: 'each', ramp: 'ease' },
@@ -118,20 +118,47 @@ export function loginDemo() {
     results: [{
       id: 'demo-bluebook',
       source: 'bluebook',
-      label: 'Bluebook Practice Test 4',
+      label: 'SAT Practice 4',
       date: addDays(today, -6),
+      addedOn: addDays(today, -5),
       scores: { rw: 660, math: 640, total: 1300 },
+      report: {
+        fileName: 'DEMO_SAT_PRACTICE_4.pdf',
+        correct: { rw: 41, math: 33, total: 74 },
+        missed: { rw: 13, math: 11, total: 24 },
+        bands: {
+          information_ideas: { filled: 5, of: 7 }, craft_structure: { filled: 4, of: 7 }, expression_of_ideas: { filled: 6, of: 7 }, standard_english: { filled: 5, of: 7 },
+          algebra: { filled: 6, of: 7 }, advanced_math: { filled: 4, of: 7 }, problem_solving: { filled: 5, of: 7 }, geometry_trig: { filled: 4, of: 7 },
+        },
+      },
       misses: {
         'nonlinear-functions': 3, 'equivalent-expressions': 2, 'circles': 2, 'right-triangles-and-trigonometry': 1,
         'percentages': 1, 'linear-functions': 1, 'one-variable-data-distributions-and-measures-of-center-and-spread': 1,
         'words-in-context': 3, 'command-of-evidence': 2, 'transitions': 2, 'boundaries': 2,
         'form-structure-and-sense': 2, 'inferences': 1, 'central-ideas-and-details': 1,
       },
+      errorLog: [
+        { id: 'demo-q1', section: 'math', module: '2', number: '14', skill: 'nonlinear-functions', mine: 'B', correct: 'D', reason: 'content', text: '', note: 'Review how vertex form shows the minimum.' },
+        { id: 'demo-q2', section: 'math', module: '2', number: '19', skill: 'circles', mine: 'A', correct: 'C', reason: 'careless', text: '', note: 'The right side is r squared, not r.' },
+        { id: 'demo-q3', section: 'rw', module: '1', number: '8', skill: 'words-in-context', mine: 'C', correct: 'A', reason: 'trap', text: '', note: 'Predict my own word before reading the choices.' },
+        { id: 'demo-q4', section: 'rw', module: '2', number: '21', skill: 'boundaries', mine: 'D', correct: 'B', reason: 'careless', text: '', note: 'Comma splice again. Check both sides for full sentences.' },
+      ],
+    }, {
+      id: 'demo-bluebook-2',
+      source: 'bluebook',
+      label: 'SAT Practice 2',
+      date: addDays(today, -27),
+      addedOn: addDays(today, -27),
+      scores: { rw: 630, math: 610, total: 1240 },
+      misses: {
+        'nonlinear-functions': 3, 'linear-functions': 2, 'circles': 2, 'percentages': 2, 'area-and-volume': 1,
+        'words-in-context': 4, 'transitions': 3, 'boundaries': 3, 'inferences': 2, 'rhetorical-synthesis': 1,
+      },
     }],
     goal: { current: 1300, target: 1550, date: addDays(today, 140) },
     scoreHistory: [
-      { date: addDays(today, -42), score: 1240, label: 'Starting estimate' },
-      { date: addDays(today, -6), score: 1300, label: 'Bluebook Practice Test 4' },
+      { date: addDays(today, -27), score: 1240, label: 'SAT Practice 2', resultId: 'demo-bluebook-2' },
+      { date: addDays(today, -6), score: 1300, label: 'SAT Practice 4', resultId: 'demo-bluebook' },
     ],
   };
   commit();
@@ -152,16 +179,37 @@ export function resetProgress() {
 
 /* ------------------------------ Results ------------------------------ */
 
-/** Save a Bluebook upload or a diagnostic. Its score (if any) also updates the goal's current score. */
+/**
+ * Save a Bluebook upload or a diagnostic to the Crest Cache. Its score (if any)
+ * also updates the goal's current score. `addedOn` is the day it was added,
+ * which is the day the study calendar starts from.
+ */
 export function addResult(result) {
-  const entry = { id: `r${Date.now()}`, date: todayISO(), ...result };
+  const today = todayISO();
+  const entry = { id: `r${Date.now()}`, date: today, addedOn: today, ...result };
   state.results.unshift(entry);
   if (entry.scores?.total) {
-    state.scoreHistory.push({ date: entry.date, score: entry.scores.total, label: entry.label });
+    state.scoreHistory.push({ date: entry.date, score: entry.scores.total, label: entry.label, resultId: entry.id });
     if (state.goal) state.goal = { ...state.goal, current: entry.scores.total };
   }
   commit();
   return entry;
+}
+
+/** Add to a saved result, e.g. Gemini's analysis or a follow-up chat. */
+export function updateResult(id, changes) {
+  const entry = getResult(id);
+  if (!entry) return null;
+  Object.assign(entry, changes);
+  commit();
+  return entry;
+}
+
+/** Remove a result from the Crest Cache (and its point on the score history). */
+export function deleteResult(id) {
+  state.results = state.results.filter((r) => r.id !== id);
+  state.scoreHistory = state.scoreHistory.filter((h) => h.resultId !== id);
+  commit();
 }
 
 /* ------------------------------ Practice ----------------------------- */

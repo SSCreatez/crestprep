@@ -1,6 +1,7 @@
 /**
  * topbar.js: the app bar on every signed-in page: logo, tabs (generated from
- * the route table), streak, coins, level, language, theme, and Sign out.
+ * the route table), streak, coins, level, theme, and Sign out. (The Language
+ * helper lives in the lesson toolbar, beside each question.)
  * The signed-out homepage has no bar, just the logo, like PrepPros.
  */
 import { getState, setPref, signOut, currentStreak } from '../store.js';
@@ -11,7 +12,7 @@ import { navigate, appTabs } from '../router.js';
 import { CREST } from './icons.js';
 
 /** Sub-pages light up their parent tab. */
-const PARENT_TAB = { session: 'practice', results: 'upload' };
+const PARENT_TAB = { session: 'practice', results: 'upload', cache: 'home' };
 
 export function langSelect() {
   const lang = getState().prefs.lang;
@@ -41,7 +42,6 @@ function appBar(active) {
       <span class="stat" title="Day streak">🔥 <b>${currentStreak()}</b></span>
       <span class="stat" title="Coins"><span class="coin" aria-hidden="true"></span><b>${s.coins}</b></span>
       <span class="stat stat-level" title="${s.xp} XP total">Lv ${lp.level} · ${lp.title}</span>
-      <span class="hide-sm">${langSelect()}</span>
       ${themeToggle()}
       <button type="button" class="btn btn-outline btn-sm" data-top="signout">${t('app.signout')}</button>
     </div>

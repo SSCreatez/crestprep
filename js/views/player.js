@@ -10,6 +10,7 @@
  *   #/session/path         → a practice set built from "Your study path today"
  *   #/session/today        → today's question (bonus XP and coins)
  */
+import { CONFIG } from '../config.js';
 import { COURSE, LESSONS, getLesson, getChapter, lessonIndex, percentComplete, nextUnfinished } from '../data/course.js';
 import { getQuestion } from '../data/questions.js';
 import { SKILLS } from '../data/skills.js';
@@ -126,7 +127,7 @@ function buildSession(kind) {
 
 function sessionHTML(set) {
   return `<div class="lesson-inner">
-    ${lessonHeader({ header: COURSE.title, subhead: set.kind === 'today' ? 'One question a day keeps the streak alive' : 'Personal practice set' })}
+    ${lessonHeader({ header: COURSE.title, subhead: set.kind === 'today' ? CONFIG.streakQuote : 'Personal practice set' })}
     <p class="lesson-kind">${set.kind === 'today' ? 'Daily question' : 'Built for you'}</p>
     <h1 class="lesson-title">${set.title}</h1>
     <p class="muted">${set.intro}</p>

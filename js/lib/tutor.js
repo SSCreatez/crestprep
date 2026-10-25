@@ -6,9 +6,9 @@
  *  2. Answer from the hints written for that question, one step at a time.
  *  3. Never reveal the answer, even if asked directly.
  *
- * Everything goes through respond(question, message). To plug in a live AI
- * model later, keep this function's shape and send the question + hints to
- * an API from a serverless function; the chat screen won't need to change.
+ * This is the written-hint tutor. Typed questions go to the Gemini AI tutor
+ * first (see components/toolsDrawer.js); these written hints answer the quick
+ * buttons right away and take over whenever the AI can't answer.
  */
 import { findTerms } from '../data/glossary.js';
 
@@ -39,7 +39,7 @@ export function createTutor() {
   }
 
   function greet(q, number) {
-    return `Let's work through Question ${number} together. What have you tried so far? Ask for a hint whenever you want a nudge. I'll never just hand you the answer.`;
+    return `Let's work through Question ${number} together. What have you tried so far? Type a question, or tap a button for a written hint. I'll never just hand you the answer.`;
   }
 
   function respond(q, message, intent = detectIntent(message)) {
@@ -69,5 +69,5 @@ export function createTutor() {
     }
   }
 
-  return { respond, greet, reset: (qid) => hintsGiven.delete(qid) };
+  return { respond, greet, reset: (qid) => hintsGiven.delete(qid), hintsUsed: (qid) => hintsGiven.get(qid) || 0 };
 }

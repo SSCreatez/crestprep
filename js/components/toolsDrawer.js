@@ -1,7 +1,8 @@
 /**
  * toolsDrawer.js: the panel that slides in beside a lesson.
  *   Desmos   → real graphing calculator; can load the current question's equations
- *   Tutor    → guided hints for the current question (lib/tutor.js)
+ *   Tutor    → typed questions go to the Gemini AI tutor (lib/ai.js), quick buttons
+ *              and any AI hiccup use the written hints (lib/tutor.js)
  *   Language → plain-English version + translated key words (data/glossary.js)
  *
  * The drawer is created ONCE and re-attached on every lesson, so the Desmos
@@ -12,6 +13,8 @@ import { getState, setPref } from '../store.js';
 import { t, LANGUAGES } from '../i18n.js';
 import { esc, loadScript, renderMath } from '../lib/dom.js';
 import { createTutor } from '../lib/tutor.js';
+import { askAI, formatAI, AI_LABEL } from '../lib/ai.js';
+import { SKILLS } from '../data/skills.js';
 import { findTerms } from '../data/glossary.js';
 import { guideText } from './noteGuide.js';
 
@@ -23,6 +26,30 @@ const QUICK = [
   ['words', 'What do these words mean?'],
   ['desmos', 'Can Desmos help?'],
 ];
+
+/** Text without HTML tags (questions use a little HTML, like <br> and <strong>). */
+function plainText(html) {
+  const div = document.createElement('div');
+  div.innerHTML = String(html ?? '').replace(/<br\s*\/?>/gi, '\n');
+  return div.textContent.trim();
+}
+
+/** What the AI tutor gets to see: the question, the creator's hints and notes, and the answer (for the server's leak check only). */
+function questionForAI(q, hintsUsed) {
+  return {
+    section: q.section,
+    skill: SKILLS[q.skill]?.label,
+    pattern: q.pattern,
+    passage: plainText(q.passage),
+    stem: plainText(q.stem),
+    choices: q.choices.map(plainText),
+    hints: q.hints.map(plainText),
+    trap: plainText(q.trap),
+    steps: q.steps.map(plainText),
+    answer: q.answer,
+    hintsUsed,
+  };
+}
 
 export function createToolsDrawer() {
   const el = document.createElement('aside');
@@ -49,12 +76,13 @@ export function createToolsDrawer() {
         <input id="chat-input" class="input" autocomplete="off" placeholder="Ask about this question…">
         <button class="btn btn-primary btn-sm">Send</button>
       </form>
-      <p class="chat-note small muted">Hints are written for each question, so they guide you without giving away the answer.</p>
+      <p class="chat-note small muted">${AI_LABEL}. It coaches with hints and won’t give you the answer. The buttons use CrestPrep’s written hints.</p>
     </section>
     <section class="pane" data-pane="esl" hidden></section>`;
 
   const tutor = createTutor();
-  const chats = new Map();            // question id → [{ from, html }]
+  const chats = new Map();            // question id → [{ from, html, text }]
+  let lastProblem = null;             // why the AI couldn't answer last time (said once, not every message)
   let pane = null;                    // which tab is open (null = closed)
   let ctx = { kind: 'none' };         // { kind: 'question', q, number } or { kind: 'lesson', lesson }
   let calculator = null;              // Desmos instance once loaded
@@ -137,7 +165,10 @@ export function createToolsDrawer() {
 
   /* ---------- Tutor chat ---------- */
   function chatFor(q) {
-    if (!chats.has(q.id)) chats.set(q.id, [{ from: 'tutor', html: tutor.greet(q, ctx.number) }]);
+    if (!chats.has(q.id)) {
+      const html = tutor.greet(q, ctx.number);
+      chats.set(q.id, [{ from: 'tutor', html, text: plainText(html) }]);
+    }
     return chats.get(q.id);
   }
 
@@ -154,19 +185,43 @@ export function createToolsDrawer() {
       return;
     }
     form.hidden = false;
-    log.innerHTML = chatFor(ctx.q).map((m) => `<div class="msg msg-${m.from}">${m.html}</div>`).join('');
+    log.innerHTML = chatFor(ctx.q).map((m) => `<div class="msg msg-${m.from}${m.pending ? ' msg-pending' : ''}">${m.html}</div>`).join('');
     quick.innerHTML = QUICK.filter(([intent]) => intent !== 'desmos' || ctx.q.section === 'math')
       .map(([intent, label]) => `<button type="button" class="btn btn-outline btn-sm" data-quick="${intent}">${label}</button>`).join('');
     renderMath(log);
     log.lastElementChild?.scrollIntoView({ block: 'nearest' });
   }
 
-  function send(text, intent) {
+  /**
+   * Quick buttons get a written hint right away. Typed questions go to the
+   * Gemini AI tutor; if it can't answer, the written hints step in.
+   */
+  async function send(text, intent) {
     if (ctx.kind !== 'question' || !text.trim()) return;
-    const chat = chatFor(ctx.q);
-    chat.push({ from: 'you', html: esc(text) });
-    chat.push({ from: 'tutor', html: tutor.respond(ctx.q, text, intent) });
+    const q = ctx.q;
+    const chat = chatFor(q);
+    const earlier = chat.slice(-8).map((m) => ({ from: m.from, text: m.text }));
+    chat.push({ from: 'you', html: esc(text), text });
+    if (intent) {
+      const html = tutor.respond(q, text, intent);
+      chat.push({ from: 'tutor', html, text: plainText(html) });
+      renderChat();
+      return;
+    }
+    const reply = { from: 'tutor', html: '<span class="msg-label">AI tutor</span>Thinking…', text: '', pending: true };
+    chat.push(reply);
     renderChat();
+    try {
+      const answer = await askAI('hint', { question: questionForAI(q, tutor.hintsUsed(q.id)), message: text, history: earlier });
+      Object.assign(reply, { html: `<span class="msg-label">AI tutor</span>${formatAI(answer)}`, text: answer, pending: false });
+      lastProblem = null;
+    } catch (error) {
+      const html = tutor.respond(q, text);
+      const note = error.reason !== lastProblem ? `<span class="msg-note">${esc(error.message)}</span>` : '';
+      lastProblem = error.reason;
+      Object.assign(reply, { html: `${html}${note}`, text: plainText(html), pending: false });
+    }
+    if (pane === 'tutor' && ctx.kind === 'question' && ctx.q.id === q.id) renderChat();
   }
 
   /* ---------- Language helper ---------- */

@@ -12,7 +12,7 @@
  */
 import { CONFIG } from './config.js';
 import { loadScript } from './lib/dom.js';
-import { loginWithGoogle } from './store.js';
+import { loginWithGoogle, getState } from './store.js';
 
 const SUPABASE_SDK = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
 let client = null;
@@ -60,6 +60,21 @@ export async function finishSignIn() {
   }
   history.replaceState(null, '', `${location.pathname}#/home`);       // remove ?code=... from the address bar
   return message;
+}
+
+/**
+ * The signed-in student's Supabase token, which the AI tutor's server function
+ * checks before it calls Gemini. Returns null for the demo account or if signed out.
+ */
+export async function getAccessToken() {
+  if (getState().user?.provider !== 'google') return null;
+  try {
+    const supabase = await getClient();
+    const { data } = await supabase.auth.getSession();   // refreshes an expired token by itself
+    return data.session?.access_token || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function signOutGoogle() {

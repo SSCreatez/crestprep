@@ -31,4 +31,7 @@ export const CONFIG = {
 
   // XP a student needs each day to fill the daily goal ring.
   dailyGoalXp: 50,
+
+  // Shown with the daily question on Home and in the course.
+  streakQuote: 'a question a day keeps the retake away; keep the streak alive :)',
 };

@@ -1,10 +1,14 @@
 /**
- * i18n.js: interface translations.
- *   t('btn.start')                         → "Start free course" (or Español, हिन्दी, ...)
+ * i18n.js: interface text.
+ *   t('btn.start')                         → "Start free course"
+ *
+ * The site's interface is English. The language setting (prefs.lang) is used
+ * only by the Language helper in lessons, which translates each question's key
+ * words into the student's language. Other languages' interface strings stay in
+ * data/translations.js for a future full translation.
  *   t('hero.sub', { name, score })         → fills in {name} and {score}
  */
 import { TRANSLATIONS } from './data/translations.js';
-import { getState } from './store.js';
 
 export const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -15,7 +19,6 @@ export const LANGUAGES = [
 ];
 
 export function t(key, vars = {}) {
-  const lang = getState().prefs.lang;
-  const text = TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.en[key] ?? key;
+  const text = TRANSLATIONS.en[key] ?? key;
   return text.replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? '');
 }

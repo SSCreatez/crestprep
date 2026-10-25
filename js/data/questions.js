@@ -11,8 +11,15 @@
  *
  * Math is written in LaTeX between \\( and \\) and typeset by KaTeX.
  * To add a question, copy one block, give it a new id, and add the id to a lesson in course.js.
+ *
+ * The bigger banks live in data/bank/: skill drills (drills.js) and the three
+ * full-length CrestPrep practice tests (test1.js, test2.js, test3.js).
  */
-export const QUESTIONS = [
+import { QUESTION_TO_SKILL } from './cbSkills.js';
+import { DRILLS } from './bank/drills.js';
+import { TEST_QUESTIONS } from './bank/tests.js';
+
+const CORE = [
   /* ---------------------------------- MATH ---------------------------------- */
   {
     id: 'm-alg-01', section: 'math', skill: 'algebra', difficulty: 1,
@@ -479,6 +486,17 @@ export const QUESTIONS = [
   },
 ];
 
+CORE.forEach((q) => { q.cb = QUESTION_TO_SKILL[q.id]; });
+
+/**
+ * The practice pool: the core questions plus the skill drills. Lessons, the
+ * short practice sets, the diagnostic, and today's question all draw from here.
+ */
+export const QUESTIONS = [...CORE, ...DRILLS];
+
+/** Everything, including full-length test questions (kept out of the practice pool so the tests stay fresh). */
+export const ALL_QUESTIONS = [...QUESTIONS, ...TEST_QUESTIONS];
+
 /** Look up one question by id. */
-const BY_ID = new Map(QUESTIONS.map((q) => [q.id, q]));
+const BY_ID = new Map(ALL_QUESTIONS.map((q) => [q.id, q]));
 export const getQuestion = (id) => BY_ID.get(id);

@@ -1,6 +1,7 @@
 /**
  * tests.js: Bluebook-style adaptive practice.
- *   #/tests             → choose the diagnostic or a one-section practice set
+ *   #/tests             → choose a full-length test, the diagnostic, or a practice set
+ *   #/tests/full1..3    → full-length CrestPrep practice tests (98 questions)
  *   #/tests/diagnostic  → Reading and Writing, then Math (Module 1 → Module 2 each)
  *   #/tests/math, /rw   → one section
  *
@@ -8,11 +9,11 @@
  * mark for review, a question navigator, and Desmos in Math.
  * Module 1 results decide whether Module 2 is harder or easier (lib/adaptive.js).
  */
-import { createRun, routeFor, estimateSection, pickModule, TEST_KINDS, ROUTE_THRESHOLD } from '../lib/adaptive.js';
+import { createRun, routeFor, routeThreshold, estimateSection, module2For, TEST_KINDS } from '../lib/adaptive.js';
+import { FULL_TESTS } from '../data/bank/tests.js';
 import { PACE_SECONDS } from '../lib/scoring.js';
 import { getQuestion } from '../data/questions.js';
 import { SECTION_LABEL } from '../data/skills.js';
-import { QUESTION_TO_SKILL } from '../data/cbSkills.js';
 import { addResult, recordAnswer, getState } from '../store.js';
 import { navigate } from '../router.js';
 import { onAction, renderMath, toast, esc } from '../lib/dom.js';
@@ -44,18 +45,18 @@ function submitModule() {
   const correct = moduleIds().filter((id) => sec.answers[id] === getQuestion(id).answer).length;
   if (run.stage === 'm1') {
     sec.m1Correct = correct;
-    sec.route = routeFor(correct);                                       // the adaptive step
-    sec.m2 = pickModule(sec.section, sec.route === 'harder' ? 3 : 1, sec.m1);
+    sec.route = routeFor(correct, sec.m1.length, run.full);             // the adaptive step
+    sec.m2 = module2For(run, sec);
     run.stage = 'routing';
   } else {
     sec.m2Correct = correct;
-    sec.score = estimateSection(sec.route, sec.m1Correct, correct);
+    sec.score = estimateSection(sec.route, sec.m1Correct, correct, sec.m1.length, sec.m2.length);
     if (run.si < run.sections.length - 1) run.stage = 'break';
     else finish();
   }
 }
 
-/** Grade everything, award XP, and (for the diagnostic) save a result that builds the plan. */
+/** Grade everything, award XP, and (for the diagnostic and full tests) save a result that builds the plan. */
 function finish() {
   const all = run.sections.flatMap((sec) => [...sec.m1, ...sec.m2].map((id) => ({ sec, id })));
   const misses = {};
@@ -64,53 +65,61 @@ function finish() {
     const isLast = i === all.length - 1;
     const result = recordAnswer(getQuestion(id), sec.answers[id] ?? -1, run.label, { silent: !isLast });
     xp += result.xp;
-    if (!result.correct) misses[QUESTION_TO_SKILL[id]] = (misses[QUESTION_TO_SKILL[id]] || 0) + 1;
+    const skill = getQuestion(id).cb;
+    if (!result.correct && skill) misses[skill] = (misses[skill] || 0) + 1;
   });
-  if (run.kind === 'diagnostic') {
+  if (run.kind === 'diagnostic' || run.full) {
     const [rw, math] = run.sections.map((sec) => sec.score);
-    run.resultId = addResult({ source: 'diagnostic', label: run.label, scores: { rw, math, total: rw + math }, misses }).id;
+    const source = run.full ? 'crestprep' : 'diagnostic';
+    run.resultId = addResult({ source, label: run.label, scores: { rw, math, total: rw + math }, misses }).id;
   }
   run.stage = 'done';
   toast(`+${xp} XP for finishing`, 'good');
 }
 
 /* ------------------------------- Screens ------------------------------- */
-function routeMapSVG(route) {
+function routeMapSVG(route, { need = 'most right', m1 = 'Medium questions' } = {}) {
   const state = (name) => (route === name ? 'is-chosen' : route ? 'is-faded' : '');
   return `<svg class="route-map" viewBox="0 0 600 220" role="img" aria-label="Module 1 routes to a harder or easier Module 2">
     <path class="rm-path ${route === 'harder' ? 'is-chosen' : ''}" d="M190,110 C290,110 300,50 400,50"/>
     <path class="rm-path ${route === 'easier' ? 'is-chosen' : ''}" d="M190,110 C290,110 300,170 400,170"/>
     <g><rect class="rm-box rm-m1" x="20" y="80" width="170" height="60" rx="8"/>
       <text class="rm-title" x="105" y="106" text-anchor="middle">Module 1</text>
-      <text class="rm-sub" x="105" y="126" text-anchor="middle">Medium questions</text></g>
+      <text class="rm-sub" x="105" y="126" text-anchor="middle">${m1}</text></g>
     <g class="${state('harder')}"><rect class="rm-box" x="400" y="20" width="180" height="60" rx="8"/>
       <text class="rm-title" x="490" y="46" text-anchor="middle">Harder Module 2</text>
       <text class="rm-sub" x="490" y="66" text-anchor="middle">Score range up to 800</text></g>
     <g class="${state('easier')}"><rect class="rm-box" x="400" y="140" width="180" height="60" rx="8"/>
       <text class="rm-title" x="490" y="166" text-anchor="middle">Easier Module 2</text>
       <text class="rm-sub" x="490" y="186" text-anchor="middle">Score range tops out lower</text></g>
-    <text class="rm-sub" x="292" y="70" text-anchor="middle">${ROUTE_THRESHOLD}+ right</text>
+    <text class="rm-sub" x="292" y="70" text-anchor="middle">${need}</text>
     <text class="rm-sub" x="292" y="162" text-anchor="middle">fewer</text>
   </svg>`;
 }
 
 function menuHTML() {
   const options = [
-    ['diagnostic', 'CrestPrep diagnostic', 'Both sections, 12 questions, about 17 minutes. Builds your weak spots and your calendar.', 'btn-primary'],
-    ['math', 'Math practice set', '6 questions, about 10 minutes, with Desmos.', 'btn-outline'],
-    ['rw', 'Reading and Writing practice set', '6 questions, about 7 minutes.', 'btn-outline'],
+    ['diagnostic', 'CrestPrep diagnostic', 'Both sections, 24 questions, about 35 minutes. Each question tests a different official skill, so it maps your weak spots and builds your calendar.', 'btn-primary'],
+    ['math', 'Math practice set', '8 questions, about 13 minutes, with Desmos.', 'btn-outline'],
+    ['rw', 'Reading and Writing practice set', '8 questions, about 10 minutes.', 'btn-outline'],
   ];
   return `<div class="page"><div class="wrap-narrow">
     <header class="page-head">
       <h1>Bluebook-style practice</h1>
-      <p>Short adaptive sets that work like the real test: your Module 1 results decide whether Module 2 is easier or harder. Each module is timed at the real test's pace.</p>
+      <p>Tests that work like the real one: your Module 1 results decide whether Module 2 is easier or harder, and each module is timed at the real test's pace.</p>
     </header>
+    <h2 class="h-sm">Full-length CrestPrep practice tests</h2>
+    <p class="small muted">98 questions and about 2 hours 14 minutes each, with timing, mark for review, answer cross-out, and Desmos. Your results go to Crest Cache with a full breakdown and a new calendar. Keep this tab open: refreshing the page restarts the test.</p>
+    <div class="test-options">
+      ${FULL_TESTS.map((test) => `<article class="panel test-option"><h3>${test.label}</h3><p>Reading and Writing: 2 modules of 27. Math: 2 modules of 22.</p><a class="btn btn-primary btn-sm" href="#/tests/${test.kind}">Start test</a></article>`).join('')}
+    </div>
+    <h2 class="h-sm">Shorter sets</h2>
     <div class="test-options">
       ${options.map(([kind, title, text, style]) => `<article class="panel test-option"><h3>${title}</h3><p>${text}</p><a class="btn ${style} btn-sm" href="#/tests/${kind}">Start</a></article>`).join('')}
     </div>
     <section class="panel">
       ${routeMapSVG(null)}
-      <p class="small muted center">These sets are shorter than a full Bluebook test (98 questions). Full-length CrestPrep tests come as the question bank grows.</p>
+      <p class="small muted center">Every CrestPrep question is original, written for practice and modeled on the skills College Board tests. Some people and studies in the passages are invented.</p>
     </section>
   </div></div>`;
 }
@@ -179,7 +188,7 @@ function routingHTML() {
   return `<div class="page"><div class="wrap-narrow routing center">
     <p class="lesson-kind">${SECTION_LABEL[sec.section]}: Module 1 finished</p>
     <h1>You got ${sec.m1Correct} of ${sec.m1.length} right</h1>
-    ${routeMapSVG(sec.route)}
+    ${routeMapSVG(sec.route, { need: `${routeThreshold(sec.m1.length, run.full)}+ right`, m1: run.full ? 'Mixed questions' : 'Medium questions' })}
     <p>${sec.route === 'harder'
       ? 'That routes you to the harder Module 2, the only path that reaches the top of the score range.'
       : 'That routes you to the easier Module 2. On the real test, strong Module 1 accuracy is what unlocks the harder module and the higher scores.'}</p>
@@ -209,7 +218,9 @@ function doneHTML() {
         <span class="score-mid">${sec.score}</span>
       </div>`).join('')}
     ${run.sections.length === 2 ? `<div class="score-line"><span><b>Estimated total</b></span><span class="score-big">${total}</span></div>` : ''}
-    <p class="small muted">A rough estimate from a short test. The real SAT scores 98 questions with a statistical model.</p>
+    <p class="small muted">${run.full
+      ? 'An estimate from a full-length CrestPrep test. The real SAT scores with a statistical model, so treat each section score as roughly ±40 points.'
+      : 'A rough estimate from a short test. The real SAT scores 98 questions with a statistical model.'}</p>
     <p class="test-actions">
       ${run.resultId ? `<a class="btn btn-primary" href="#/results/${run.resultId}">See my breakdown and calendar</a>` : ''}
       <a class="btn btn-outline" href="#/tests">Back to practice</a>

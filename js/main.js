@@ -18,6 +18,7 @@ import * as dashboard from './views/dashboard.js';
 import * as upload from './views/upload.js';
 import * as player from './views/player.js';
 import * as tests from './views/tests.js';
+import * as cache from './views/cache.js';
 
 const ROUTES = {
   '':       { view: home,      public: true },
@@ -25,6 +26,7 @@ const ROUTES = {
   home:     { view: dashboard, tab: 'app.home' },
   upload:   { view: upload,    tab: 'app.upload' },
   results:  { view: upload },                      // #/results/<id>: one test's breakdown
+  cache:    { view: cache },                       // the Crest Cache: every test added so far
   practice: { view: player,    tab: 'app.practice' },
   session:  { view: player },                      // personal practice sets reuse the course player
   tests:    { view: tests,     tab: 'app.tests' },
